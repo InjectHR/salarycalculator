@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-<header><div class="wrap"><span class="pill">Stage 2 API-assisted calculator</span><h1>Pay Rate & Annualised Salary Calculator</h1><p>Estimate salary-to-hourly, hourly-to-salary, award benchmark comparisons, annualised salary absorption, allowances, overtime and penalty assumptions. Fair Work API lookup assists with award/classification rates, with manual fallback retained.</p></div></header>
+<header><div class="wrap"><span class="pill">Stage 2.1 API-assisted calculator</span><h1>Pay Rate & Annualised Salary Calculator</h1><p>Estimate salary-to-hourly, hourly-to-salary, award benchmark comparisons, annualised salary absorption, allowances, overtime and penalty assumptions. Fair Work API lookup assists with award/classification rates, using a small proxy to avoid browser fetch/CORS issues. Manual fallback is retained.</p></div></header>
 <main class="wrap">
   <div class="grid">
     <section>
@@ -38,7 +38,7 @@
           <div class="row"><div><label for="awardHourly">Award/minimum hourly rate ($)</label><input id="awardHourly" type="number" step="0.01" value="29.70"></div><div><label for="awardLabelManual">Award/classification label</label><input id="awardLabelManual" type="text" value="Manual award benchmark"></div></div>
         </div>
         <div id="apiAwardBox" class="compact-box hidden">
-          <div class="notice warning">The API key is embedded in this static page for convenience. If this is uploaded to a public GitHub repository, the key will be visible in the browser/source code.</div>
+          <div class="notice warning">This version expects the Fair Work API to be called through a small proxy, such as a Cloudflare Worker. This avoids the browser “Failed to fetch” issue and keeps the API key out of the public page source.</div>
           <div class="row">
             <div><label for="awardSearch">Search award name</label><input id="awardSearch" type="text" placeholder="e.g. Clerks, Retail, Banking"></div>
             <div><label>&nbsp;</label><button id="searchAwardsBtn" type="button">Search awards</button></div>
@@ -121,8 +121,9 @@
 </main>
 <script>
 const CONFIG = {
-  API_BASE: 'https://api.fwc.gov.au',
-  API_KEY: '804d9b4e809547ae9557302c76179e33'
+  API_PROXY_BASE: 'PASTE_YOUR_CLOUDFLARE_WORKER_URL_HERE',
+  DIRECT_API_BASE: 'https://api.fwc.gov.au',
+  USE_PROXY: true
 };
 const $ = id => document.getElementById(id);
 const money = n => (isFinite(n)?n:0).toLocaleString('en-AU',{style:'currency',currency:'AUD',minimumFractionDigits:2,maximumFractionDigits:2});
@@ -131,8 +132,25 @@ const val = id => $(id).value;
 let allowanceCount = 0;
 let selectedAward = null;
 let selectedRate = null;
-function apiUrl(path, params={}){const u=new URL(CONFIG.API_BASE+path);Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')u.searchParams.set(k,v)});u.searchParams.set('subscription-key',CONFIG.API_KEY);return u.toString()}
-async function fetchJson(path, params){const res=await fetch(apiUrl(path,params),{headers:{'Accept':'application/json'}});if(!res.ok){let detail='';try{detail=await res.text()}catch{}throw new Error('API request failed: '+res.status+' '+detail.slice(0,140));}return res.json()}
+function apiUrl(path, params={}){
+  const base = CONFIG.USE_PROXY ? CONFIG.API_PROXY_BASE : CONFIG.DIRECT_API_BASE;
+  if (!base || base.includes('PASTE_YOUR_CLOUDFLARE_WORKER_URL_HERE')) {
+    throw new Error('API proxy URL has not been configured yet. Add your Cloudflare Worker URL in CONFIG.API_PROXY_BASE.');
+  }
+  const u=new URL(base.replace(/\/$/, '')+path);
+  Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')u.searchParams.set(k,v)});
+  return u.toString();
+}
+async function fetchJson(path, params){
+  let res;
+  try{
+    res=await fetch(apiUrl(path,params),{headers:{'Accept':'application/json'}});
+  }catch(e){
+    throw new Error('Network request failed. This is commonly caused by CORS or an unconfigured proxy URL. Check the Cloudflare Worker URL and try again.');
+  }
+  if(!res.ok){let detail='';try{detail=await res.text()}catch{}throw new Error('API request failed: '+res.status+' '+detail.slice(0,180));}
+  return res.json();
+}
 function setApiStatus(msg,type=''){const el=$('apiStatus');el.textContent=msg;el.className='api-status small '+type}
 function setLoading(btn, loading, text){if(loading){btn.dataset.old=btn.textContent;btn.innerHTML='<span class="spinner"></span> '+text;btn.disabled=true}else{btn.textContent=btn.dataset.old||btn.textContent;btn.disabled=false}}
 async function searchAwards(){const q=val('awardSearch').trim();if(!q){setApiStatus('Enter an award keyword first.','warn');return}const btn=$('searchAwardsBtn');setLoading(btn,true,'Searching');setApiStatus('Searching awards...');try{const data=await fetchJson('/api/v1/awards',{name:q.replaceAll(' ','+'),limit:100,sort:'name asc'});const results=data.results||[];const sel=$('awardSelect');sel.innerHTML='<option value="">Select an award</option>';results.forEach(a=>{const opt=document.createElement('option');opt.value=a.code||a.award_fixed_id;opt.textContent=`${a.code || a.award_fixed_id} - ${a.name} (${a.published_year || 'current'})`;opt.dataset.award=JSON.stringify(a);sel.appendChild(opt)});setApiStatus(results.length?`Found ${results.length} award result(s).`:'No awards found. Try a broader keyword.', results.length?'good':'warn')}catch(e){setApiStatus(e.message,'bad')}finally{setLoading(btn,false)}}

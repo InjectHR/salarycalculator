@@ -1,563 +1,153 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-AU">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Salary, Hourly Rate and Award Comparison Calculator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pay Rate & Annualised Salary Calculator</title>
   <style>
-    :root {
-      --bg: #f6f7fb;
-      --card: #ffffff;
-      --ink: #172033;
-      --muted: #617089;
-      --line: #dce2ee;
-      --accent: #355cff;
-      --accent-dark: #213fc2;
-      --good: #0f7b45;
-      --warn: #b45309;
-      --bad: #b42318;
-      --soft: #eef2ff;
-      --shadow: 0 14px 40px rgba(23, 32, 51, 0.08);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: linear-gradient(135deg, #f7f8ff 0%, #eef4f8 100%); color: var(--ink); min-height: 100vh; }
-    header { max-width: 1240px; margin: 0 auto; padding: 38px 20px 12px; }
-    h1 { margin: 0 0 12px; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.05; letter-spacing: -0.04em; }
-    .subtitle { color: var(--muted); font-size: 1.04rem; max-width: 930px; line-height: 1.55; margin: 0; }
-    main { max-width: 1240px; margin: 0 auto; padding: 20px 20px 54px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr); gap: 22px; }
-    .card { background: var(--card); border: 1px solid rgba(220, 226, 238, 0.9); border-radius: 22px; box-shadow: var(--shadow); }
-    .panel { padding: 22px; }
-    .section-title { margin: 0 0 14px; font-size: 1.1rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .section-title small { color: var(--muted); font-weight: 500; font-size: 0.78rem; }
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-    label { display: block; font-weight: 650; font-size: 0.9rem; margin-bottom: 7px; }
-    .hint { display: block; color: var(--muted); font-weight: 450; font-size: 0.78rem; margin-top: 4px; line-height: 1.35; }
-    input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 13px; padding: 11px 12px; font-size: 1rem; color: var(--ink); background: #fff; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-    textarea { min-height: 190px; resize: vertical; font-family: inherit; font-size: 0.92rem; line-height: 1.5; }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(53, 92, 255, 0.12); }
-    input[type="checkbox"] { width: auto; margin-right: 8px; transform: translateY(1px); }
-    .full { grid-column: 1 / -1; }
-    .toggle-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 14px; }
-    .toggle-row button, .actions button, .mini-button { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 10px 14px; font-weight: 700; cursor: pointer; transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
-    .toggle-row button.active, .actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .toggle-row button:hover, .actions button:hover, .mini-button:hover { transform: translateY(-1px); }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-    .actions button { border-radius: 13px; padding: 12px 15px; }
-    .actions button.secondary { background: #fff; }
-    .results { position: sticky; top: 16px; align-self: start; overflow: hidden; }
-    .hero-result { background: linear-gradient(135deg, var(--accent), #6b7cff); color: #fff; padding: 24px; }
-    .hero-result span { display: block; opacity: 0.9; font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-    .hero-result strong { display: block; font-size: clamp(2rem, 5vw, 3.1rem); letter-spacing: -0.05em; }
-    .result-body { padding: 22px; }
-    .metric-list { display: grid; gap: 10px; margin: 0 0 18px; }
-    .metric { display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--line); border-radius: 15px; padding: 12px 14px; background: #fff; }
-    .metric .label { color: var(--muted); font-weight: 650; font-size: 0.88rem; }
-    .metric .value { font-weight: 800; text-align: right; }
-    .metric.good .value { color: var(--good); }
-    .metric.bad .value { color: var(--bad); }
-    .metric.warn .value { color: var(--warn); }
-    .status { padding: 14px 15px; border-radius: 16px; font-weight: 750; line-height: 1.4; margin: 14px 0; }
-    .status.good { color: var(--good); background: #eaf8f0; border: 1px solid #c7eed9; }
-    .status.bad { color: var(--bad); background: #fff0ee; border: 1px solid #ffd0ca; }
-    .status.warn { color: var(--warn); background: #fff7ed; border: 1px solid #fed7aa; }
-    details { border: 1px solid var(--line); border-radius: 16px; padding: 13px 14px; background: #fbfcff; }
-    summary { cursor: pointer; font-weight: 800; }
-    .breakdown { margin-top: 10px; display: grid; gap: 8px; }
-    .breakdown-row { display: flex; justify-content: space-between; gap: 14px; color: var(--muted); font-size: 0.92rem; }
-    .breakdown-row strong { color: var(--ink); text-align: right; }
-    .note { background: var(--soft); border: 1px solid #d9defc; border-radius: 16px; padding: 13px 14px; color: #2c3a82; line-height: 1.45; font-size: 0.9rem; }
-    .divider { height: 1px; background: var(--line); margin: 20px 0; }
-    .hidden { display: none !important; }
-    .allowance-row { display: grid; grid-template-columns: 1.15fr 0.75fr 0.9fr 1fr auto; gap: 10px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: #fbfcff; margin-bottom: 10px; }
-    .mini-button { border-radius: 12px; padding: 10px 12px; }
-    .danger { color: var(--bad); border-color: #ffd0ca; }
-    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #f1f4f9; color: var(--muted); font-size: 0.8rem; font-weight: 750; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media (max-width: 940px) { main { grid-template-columns: 1fr; } .results { position: static; } }
-    @media (max-width: 720px) { .grid, .grid-3, .two-col { grid-template-columns: 1fr; } .allowance-row { grid-template-columns: 1fr; } header { padding-top: 28px; } }
-    @media print { body { background: #fff; } header, main { max-width: none; } .input-side, .actions, .mini-button, button { display: none !important; } main { display: block; } .results { position: static; box-shadow: none; } .card { box-shadow: none; } }
+    :root{--bg:#f6f7fb;--card:#fff;--ink:#182033;--muted:#667085;--line:#d8dde8;--accent:#2457c5;--good:#067647;--bad:#b42318;--warn:#b54708;--soft:#eef4ff;--shadow:0 10px 30px rgba(16,24,40,.08);--radius:18px}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}header{background:linear-gradient(135deg,#1f4fb2,#163170);color:#fff;padding:34px 18px}header .wrap{max-width:1180px;margin:0 auto}h1{font-size:clamp(28px,4vw,44px);margin:0 0 8px}header p{max-width:850px;margin:0;color:#e8efff}.wrap{max-width:1180px;margin:0 auto;padding:20px 18px 44px}.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}@media(max-width:920px){.grid{grid-template-columns:1fr}}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:18px}.card h2{font-size:20px;margin:0 0 12px}.card h3{font-size:16px;margin:18px 0 10px}.hint{font-size:13px;color:var(--muted);margin-top:4px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}@media(max-width:640px){.row,.row3{grid-template-columns:1fr}}label{display:block;font-weight:650;font-size:13px;margin:10px 0 5px}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink)}input:focus,select:focus,textarea:focus{outline:3px solid #d8e6ff;border-color:var(--accent)}textarea{min-height:150px;resize:vertical}.check{display:flex;align-items:center;gap:10px;margin:10px 0}.check input{width:auto}.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}button{border:0;border-radius:12px;background:var(--accent);color:#fff;padding:10px 14px;font-weight:700;cursor:pointer}button.secondary{background:#eef2f7;color:#27364d}button.danger{background:#fee4e2;color:#912018}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;background:var(--soft);color:#173a8a}.result{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:640px){.result{grid-template-columns:1fr}}.metric{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff}.metric .label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em}.metric .value{font-size:26px;font-weight:800;margin-top:4px}.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{text-align:left;border-bottom:1px solid var(--line);padding:9px 6px;vertical-align:top}th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}.small{font-size:12px;color:var(--muted)}.notice{border-left:4px solid var(--accent);background:#eef4ff;padding:12px;border-radius:12px;color:#173a8a;margin:12px 0}.warning{border-left-color:var(--warn);background:#fff7ed;color:#7a2e0e}.hidden{display:none!important}.allowance-item,.compact-box{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:#fbfcff}.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.api-status{font-size:13px;margin-top:8px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.section-toggle{margin-bottom:8px}.section-toggle select{background:#fbfcff}.footer{font-size:12px;color:var(--muted);margin-top:20px}.readonly{background:#f8fafc}.top-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}.tag{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;color:var(--muted);background:#fff}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Salary, Hourly Rate and Award Comparison Calculator</h1>
-    <p class="subtitle">A manual calculator for comparing a proposed hourly rate or annual salary against a minimum award-style benchmark, including overtime, penalties, casual loading, leave loading, allowances and super assumptions.</p>
-  </header>
-
-  <main>
-    <section class="input-side card panel">
-      <h2 class="section-title">1. Pay calculation mode <small>Choose the starting point</small></h2>
-      <div class="toggle-row" aria-label="Calculation mode">
-        <button type="button" id="hourlyMode" class="active">Hourly to salary</button>
-        <button type="button" id="salaryMode">Salary to hourly</button>
-      </div>
-      <div class="grid">
-        <div id="hourlyInputWrap">
-          <label for="actualHourly">Actual hourly rate</label>
-          <input id="actualHourly" type="number" min="0" step="0.01" value="29.70" />
-          <span class="hint">The employee's proposed or actual hourly rate.</span>
+<header><div class="wrap"><span class="pill">Stage 2 API-assisted calculator</span><h1>Pay Rate & Annualised Salary Calculator</h1><p>Estimate salary-to-hourly, hourly-to-salary, award benchmark comparisons, annualised salary absorption, allowances, overtime and penalty assumptions. Fair Work API lookup assists with award/classification rates, with manual fallback retained.</p></div></header>
+<main class="wrap">
+  <div class="grid">
+    <section>
+      <div class="card">
+        <h2>1. Calculation mode</h2>
+        <div class="row">
+          <div><label for="calcMode">What do you want to calculate?</label><select id="calcMode"><option value="hourlyToSalary">Hourly rate to annual salary</option><option value="salaryToHourly">Annual salary to hourly equivalent</option></select></div>
+          <div><label for="employmentMode">Employment type</label><select id="employmentMode"><option value="fulltime">Full-time</option><option value="parttime">Part-time</option><option value="casual">Casual</option></select></div>
         </div>
-        <div id="salaryInputWrap" class="hidden">
-          <label for="actualSalary">Annual salary / package</label>
-          <input id="actualSalary" type="number" min="0" step="100" value="64152" />
-          <span class="hint">Use the annual amount to convert back to an equivalent hourly rate.</span>
+        <div class="row">
+          <div id="hourlyInputWrap"><label for="employeeHourly">Employee hourly rate ($)</label><input id="employeeHourly" type="number" step="0.01" value="29.70"></div>
+          <div id="salaryInputWrap" class="hidden"><label for="annualSalary">Annual salary/remuneration ($)</label><input id="annualSalary" type="number" step="0.01" value="65000"></div>
+          <div><label for="ordinaryHours">Ordinary hours per week</label><input id="ordinaryHours" type="number" step="0.01" value="38"></div>
         </div>
-        <div>
-          <label for="employmentType">Employment type</label>
-          <select id="employmentType">
-            <option value="fulltime">Full-time</option>
-            <option value="parttime">Part-time</option>
-            <option value="casual">Casual</option>
-          </select>
-          <span class="hint">Part-time uses the ordinary hours entered. Casual can apply a loading to the benchmark.</span>
-        </div>
-        <div>
-          <label for="ordinaryHours">Ordinary hours per week</label>
-          <input id="ordinaryHours" type="number" min="0" step="0.1" value="38" />
-        </div>
-        <div>
-          <label for="weeksPerYear">Weeks per year</label>
-          <input id="weeksPerYear" type="number" min="0" step="0.1" value="52" />
-        </div>
-        <div>
-          <label for="awardHourly">Award / minimum base hourly rate</label>
-          <input id="awardHourly" type="number" min="0" step="0.01" value="29.70" />
-          <span class="hint">Manual Stage 1 input. Later this can be connected to award data.</span>
+        <div class="row">
+          <div><label for="weeksPerYear">Weeks per year</label><input id="weeksPerYear" type="number" step="0.01" value="52"></div>
+          <div><label for="fullTimeHours">Full-time ordinary hours for reference</label><input id="fullTimeHours" type="number" step="0.01" value="38"></div>
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <h2 class="section-title">2. Super and casual loading <small>Optional assumptions</small></h2>
-      <div class="grid">
-        <div>
-          <label><input id="superIncluded" type="checkbox" /> Salary amount includes super</label>
-          <span class="hint">If ticked, the calculator extracts the estimated salary excluding super.</span>
+      <div class="card">
+        <h2>2. Award rate source</h2>
+        <label for="awardSource">How do you want to set the award/minimum rate?</label>
+        <select id="awardSource"><option value="manual">Manual entry</option><option value="api">Fair Work API lookup</option></select>
+        <div id="manualAwardBox" class="compact-box">
+          <div class="row"><div><label for="awardHourly">Award/minimum hourly rate ($)</label><input id="awardHourly" type="number" step="0.01" value="29.70"></div><div><label for="awardLabelManual">Award/classification label</label><input id="awardLabelManual" type="text" value="Manual award benchmark"></div></div>
         </div>
-        <div>
-          <label for="superRate">Super rate %</label>
-          <input id="superRate" type="number" min="0" step="0.1" value="12" />
-        </div>
-        <div>
-          <label><input id="applyCasualLoading" type="checkbox" /> Apply casual loading to award benchmark</label>
-          <span class="hint">Usually relevant only where the employee is casual.</span>
-        </div>
-        <div>
-          <label for="casualLoadingRate">Casual loading %</label>
-          <input id="casualLoadingRate" type="number" min="0" step="0.1" value="25" />
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <h2 class="section-title">3. Annual leave loading <small>Fixed assumption</small></h2>
-      <div class="grid">
-        <div>
-          <label><input id="includeLeaveLoading" type="checkbox" checked /> Include annual leave loading</label>
-          <span class="hint">Calculated as 17.5% of 152 hours for full-time.</span>
-        </div>
-        <div>
-          <label><input id="proRataLeaveLoading" type="checkbox" checked /> Pro-rata leave loading for part-time</label>
-          <span class="hint">Uses ordinary hours / 38 for part-time. Full-time and casual stay at the fixed hours unless changed.</span>
+        <div id="apiAwardBox" class="compact-box hidden">
+          <div class="notice warning">The API key is embedded in this static page for convenience. If this is uploaded to a public GitHub repository, the key will be visible in the browser/source code.</div>
+          <div class="row">
+            <div><label for="awardSearch">Search award name</label><input id="awardSearch" type="text" placeholder="e.g. Clerks, Retail, Banking"></div>
+            <div><label>&nbsp;</label><button id="searchAwardsBtn" type="button">Search awards</button></div>
+          </div>
+          <label for="awardSelect">Select award</label><select id="awardSelect"><option value="">Search and select an award</option></select>
+          <div class="row">
+            <div><label for="employeeRateType">Rate type</label><select id="employeeRateType"><option value="AD">Adult (AD)</option><option value="">All rate types</option><option value="J">Junior / other</option><option value="TN">Trainee (TN)</option><option value="APP">Apprentice (APP)</option></select></div>
+            <div><label>&nbsp;</label><button id="loadClassificationsBtn" type="button" class="secondary">Load classifications</button></div>
+          </div>
+          <label for="classificationSelect">Select classification/pay rate</label><select id="classificationSelect"><option value="">Load classifications for selected award</option></select>
+          <div class="top-actions"><button id="applyApiRateBtn" type="button">Apply selected rate</button><span id="apiStatus" class="api-status small"></span></div>
+          <div class="hint">The tool pulls pay rates from the selected award and uses the selected calculated hourly rate as the benchmark. You should still verify award coverage and classification separately.</div>
         </div>
       </div>
 
-      <div class="divider"></div>
-
-      <h2 class="section-title">4. Overtime <small>Weekly assumption</small></h2>
-      <div class="grid">
-        <div>
-          <label for="overtimeHours">Overtime hours per week</label>
-          <input id="overtimeHours" type="number" min="0" step="0.1" value="2" />
+      <div class="card">
+        <h2>3. Add-ons and assumptions</h2>
+        <div class="row">
+          <div><label for="leaveLoadingMode">Annual leave loading</label><select id="leaveLoadingMode"><option value="no">Do not include</option><option value="yes">Include 17.5% of 152 hours</option></select></div>
+          <div><label for="casualLoadingMode">Casual loading</label><select id="casualLoadingMode"><option value="auto">Auto when casual</option><option value="no">Do not include</option><option value="yes">Include</option></select></div>
         </div>
-        <div>
-          <label for="overtimeRule">Overtime rate</label>
-          <select id="overtimeRule">
-            <option value="none">No overtime</option>
-            <option value="timehalf" selected>All overtime at 1.5x</option>
-            <option value="double">All overtime at 2x</option>
-            <option value="first3">1.5x for first 3 hours, then 2x</option>
-            <option value="custom">Custom multiplier</option>
-          </select>
+        <div id="casualLoadingBox" class="row compact-box hidden"><div><label for="casualLoadingPct">Casual loading %</label><input id="casualLoadingPct" type="number" step="0.01" value="25"></div><div><label for="casualLoadingAppliedTo">Apply casual loading to</label><select id="casualLoadingAppliedTo"><option value="award">Award benchmark only</option><option value="both">Employee and award benchmark</option></select></div></div>
+        <div class="row">
+          <div><label for="superMode">Superannuation treatment</label><select id="superMode"><option value="excluded">Salary/pay is exclusive of super</option><option value="included">Salary/remuneration includes super</option></select></div>
+          <div><label for="superRate">Super rate %</label><input id="superRate" type="number" step="0.01" value="12"></div>
         </div>
-        <div id="customOtWrap" class="hidden">
-          <label for="customOtMultiplier">Custom overtime multiplier</label>
-          <input id="customOtMultiplier" type="number" min="0" step="0.05" value="1.75" />
+        <div class="row">
+          <div><label for="allowancesMode">Allowances</label><select id="allowancesMode"><option value="no">No allowances</option><option value="yes">Add allowances</option></select></div>
+          <div><label>&nbsp;</label><button id="addAllowanceBtn" type="button" class="secondary hidden">Add allowance</button></div>
         </div>
+        <div id="allowanceList" class="hidden"></div>
       </div>
 
-      <div class="divider"></div>
-
-      <h2 class="section-title">5. Weekend and public holiday penalties <small>Optional</small></h2>
-      <div class="grid-3">
-        <div>
-          <label for="saturdayHours">Saturday hours per week</label>
-          <input id="saturdayHours" type="number" min="0" step="0.1" value="0" />
+      <div class="card">
+        <h2>4. Overtime and penalties</h2>
+        <div class="row">
+          <div><label for="overtimeMode">Overtime</label><select id="overtimeMode"><option value="none">No overtime</option><option value="flat15">All overtime at 1.5x</option><option value="flat20">All overtime at 2x</option><option value="first3then2">1.5x first 3 hours, then 2x</option><option value="custom">Custom multiplier</option></select></div>
+          <div><label for="overtimeHours">Overtime hours per week</label><input id="overtimeHours" type="number" step="0.01" value="0"></div>
         </div>
-        <div>
-          <label for="saturdayMultiplier">Saturday multiplier</label>
-          <input id="saturdayMultiplier" type="number" min="0" step="0.05" value="1.5" />
+        <div id="customOtBox" class="compact-box hidden"><label for="customOtMultiplier">Custom overtime multiplier</label><input id="customOtMultiplier" type="number" step="0.01" value="1.5"></div>
+        <div class="row3">
+          <div><label for="saturdayMode">Saturday penalty</label><select id="saturdayMode"><option value="no">Not included</option><option value="yes">Include</option></select></div>
+          <div><label for="saturdayHours">Saturday hours/week</label><input id="saturdayHours" type="number" step="0.01" value="0"></div>
+          <div><label for="saturdayMultiplier">Saturday multiplier</label><input id="saturdayMultiplier" type="number" step="0.01" value="1.25"></div>
         </div>
-        <div>
-          <label for="saturdayTreatment">Treatment</label>
-          <select id="saturdayTreatment">
-            <option value="absorbed">Salary must absorb</option>
-            <option value="paidSeparate">Paid separately</option>
-          </select>
+        <div class="row3">
+          <div><label for="sundayMode">Sunday penalty</label><select id="sundayMode"><option value="no">Not included</option><option value="yes">Include</option></select></div>
+          <div><label for="sundayHours">Sunday hours/week</label><input id="sundayHours" type="number" step="0.01" value="0"></div>
+          <div><label for="sundayMultiplier">Sunday multiplier</label><input id="sundayMultiplier" type="number" step="0.01" value="1.5"></div>
         </div>
-        <div>
-          <label for="sundayHours">Sunday hours per week</label>
-          <input id="sundayHours" type="number" min="0" step="0.1" value="0" />
-        </div>
-        <div>
-          <label for="sundayMultiplier">Sunday multiplier</label>
-          <input id="sundayMultiplier" type="number" min="0" step="0.05" value="2" />
-        </div>
-        <div>
-          <label for="sundayTreatment">Treatment</label>
-          <select id="sundayTreatment">
-            <option value="absorbed">Salary must absorb</option>
-            <option value="paidSeparate">Paid separately</option>
-          </select>
-        </div>
-        <div>
-          <label for="publicHolidayHours">Public holiday hours per year</label>
-          <input id="publicHolidayHours" type="number" min="0" step="0.1" value="0" />
-        </div>
-        <div>
-          <label for="publicHolidayMultiplier">Public holiday multiplier</label>
-          <input id="publicHolidayMultiplier" type="number" min="0" step="0.05" value="2.5" />
-        </div>
-        <div>
-          <label for="publicHolidayTreatment">Treatment</label>
-          <select id="publicHolidayTreatment">
-            <option value="absorbed">Salary must absorb</option>
-            <option value="paidSeparate">Paid separately</option>
-          </select>
+        <div class="row3">
+          <div><label for="publicHolidayMode">Public holiday penalty</label><select id="publicHolidayMode"><option value="no">Not included</option><option value="yes">Include</option></select></div>
+          <div><label for="publicHolidayHours">Public holiday hours/year</label><input id="publicHolidayHours" type="number" step="0.01" value="0"></div>
+          <div><label for="publicHolidayMultiplier">Public holiday multiplier</label><input id="publicHolidayMultiplier" type="number" step="0.01" value="2.5"></div>
         </div>
       </div>
-
-      <div class="divider"></div>
-
-      <h2 class="section-title">6. Allowances <small>Multiple rows</small></h2>
-      <div>
-        <label><input id="includeAllowances" type="checkbox" /> Include allowances</label>
-        <span class="hint">Add hourly, weekly or annual allowances. Choose whether each allowance must be absorbed by salary or is paid separately.</span>
-      </div>
-      <div id="allowanceArea" class="hidden" style="margin-top: 12px;">
-        <div id="allowanceRows"></div>
-        <button type="button" id="addAllowance" class="mini-button">+ Add allowance</button>
-      </div>
-
-      <div class="divider"></div>
-
-      <h2 class="section-title">7. Export summary wording <small>For file note or client summary</small></h2>
-      <textarea id="summaryText" readonly></textarea>
-      <div class="actions">
-        <button type="button" id="copySummary" class="primary">Copy summary</button>
-        <button type="button" id="resetDefaults" class="secondary">Reset defaults</button>
-        <button type="button" onclick="window.print()" class="secondary">Print / save PDF</button>
-      </div>
-      <p class="note" style="margin-top: 16px;">This tool is a calculation aid only. It does not determine award coverage, classification, annualised wage clause compliance, set-off validity, NES compliance, all allowances, or legal obligations.</p>
     </section>
 
-    <aside class="results card" aria-live="polite">
-      <div class="hero-result">
-        <span id="heroLabel">Estimated annual remuneration</span>
-        <strong id="heroValue">$0.00</strong>
-      </div>
-      <div class="result-body">
-        <div id="absorptionStatus" class="status warn">Enter details to test the result.</div>
-        <div class="metric-list">
-          <div class="metric"><span class="label">Effective hourly rate</span><span class="value" id="effectiveHourly">$0.00</span></div>
-          <div class="metric"><span class="label">Salary excluding super</span><span class="value" id="salaryExSuper">$0.00</span></div>
-          <div class="metric"><span class="label">Estimated super</span><span class="value" id="superAmount">$0.00</span></div>
-          <div class="metric"><span class="label">Award/minimum benchmark</span><span class="value" id="benchmarkAnnual">$0.00</span></div>
-          <div class="metric"><span class="label">Amount salary must absorb</span><span class="value" id="absorbBenchmark">$0.00</span></div>
-          <div class="metric" id="gapMetric"><span class="label">Surplus / shortfall</span><span class="value" id="gapAmount">$0.00</span></div>
+    <aside>
+      <div class="card">
+        <h2>Results</h2>
+        <div id="statusPill" class="pill">Ready</div>
+        <div class="result" style="margin-top:12px">
+          <div class="metric"><div class="label">Employee base equivalent</div><div id="employeeBase" class="value">$0</div><div class="small">Excluding super where selected</div></div>
+          <div class="metric"><div class="label">Award benchmark</div><div id="awardBenchmark" class="value">$0</div><div class="small">Based on selected assumptions</div></div>
+          <div class="metric"><div class="label">Gap / surplus</div><div id="gapSurplus" class="value">$0</div><div class="small">Positive means above benchmark</div></div>
+          <div class="metric"><div class="label">Hourly equivalent</div><div id="hourlyEquivalent" class="value">$0</div><div class="small">Annual employee base ÷ ordinary annual hours</div></div>
         </div>
-
-        <details open>
-          <summary>Calculation breakdown</summary>
-          <div class="breakdown" id="breakdown"></div>
-        </details>
-
-        <div class="divider"></div>
-        <div class="note">
-          <strong>Absorption test logic:</strong> the calculator compares the salary/remuneration available to absorb entitlements against the award/minimum benchmark items marked as absorbed by salary. Items marked as paid separately are shown in the total benchmark but not treated as requiring salary absorption.
-        </div>
+        <h3>Breakdown</h3><table><tbody id="breakdownRows"></tbody></table>
+        <h3>Selected award source</h3><div id="awardSourceSummary" class="small">Manual award benchmark</div>
       </div>
+      <div class="card">
+        <h2>Export summary</h2>
+        <textarea id="summaryText" class="readonly" readonly></textarea>
+        <div class="btns"><button id="copySummaryBtn" type="button">Copy summary</button><button type="button" class="secondary" onclick="window.print()">Print / Save PDF</button></div>
+      </div>
+      <div class="card"><h2>Important disclaimer</h2><p class="small">This tool is a calculation aid only. It does not determine award coverage, correct classification, annualised wage clause compliance, set-off enforceability, record-keeping compliance, or all possible overtime/penalty/allowance obligations. Verify against the applicable award, contract and current Fair Work guidance before relying on the result.</p></div>
     </aside>
-  </main>
-
-  <script>
-    const $ = (id) => document.getElementById(id);
-    const currency = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' });
-    const number = new Intl.NumberFormat('en-AU', { maximumFractionDigits: 2 });
-
-    const defaults = {
-      mode: 'hourly', actualHourly: 29.70, actualSalary: 64152, employmentType: 'fulltime', ordinaryHours: 38, weeksPerYear: 52,
-      awardHourly: 29.70, superIncluded: false, superRate: 12, applyCasualLoading: false, casualLoadingRate: 25,
-      includeLeaveLoading: true, proRataLeaveLoading: true, overtimeHours: 2, overtimeRule: 'timehalf', customOtMultiplier: 1.75,
-      saturdayHours: 0, saturdayMultiplier: 1.5, saturdayTreatment: 'absorbed', sundayHours: 0, sundayMultiplier: 2, sundayTreatment: 'absorbed',
-      publicHolidayHours: 0, publicHolidayMultiplier: 2.5, publicHolidayTreatment: 'absorbed', includeAllowances: false
-    };
-
-    let mode = 'hourly';
-    let allowanceId = 0;
-
-    function val(id) { return parseFloat($(id).value) || 0; }
-    function checked(id) { return $(id).checked; }
-    function money(v) { return currency.format(isFinite(v) ? v : 0); }
-    function pct(v) { return `${number.format(v)}%`; }
-
-    function setMode(nextMode) {
-      mode = nextMode;
-      $('hourlyMode').classList.toggle('active', mode === 'hourly');
-      $('salaryMode').classList.toggle('active', mode === 'salary');
-      $('hourlyInputWrap').classList.toggle('hidden', mode !== 'hourly');
-      $('salaryInputWrap').classList.toggle('hidden', mode !== 'salary');
-      calculate();
-    }
-
-    function addAllowanceRow(data = {}) {
-      allowanceId += 1;
-      const row = document.createElement('div');
-      row.className = 'allowance-row';
-      row.dataset.allowanceId = allowanceId;
-      row.innerHTML = `
-        <div>
-          <label>Allowance name</label>
-          <input class="allowance-name" type="text" value="${data.name || 'Allowance'}" />
-        </div>
-        <div>
-          <label>Amount</label>
-          <input class="allowance-amount" type="number" min="0" step="0.01" value="${data.amount ?? 0}" />
-        </div>
-        <div>
-          <label>Frequency</label>
-          <select class="allowance-frequency">
-            <option value="hourly" ${data.frequency === 'hourly' ? 'selected' : ''}>Hourly</option>
-            <option value="weekly" ${data.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
-            <option value="annual" ${data.frequency === 'annual' ? 'selected' : ''}>Annual</option>
-          </select>
-        </div>
-        <div>
-          <label>Treatment</label>
-          <select class="allowance-treatment">
-            <option value="absorbed" ${data.treatment !== 'paidSeparate' ? 'selected' : ''}>Salary must absorb</option>
-            <option value="paidSeparate" ${data.treatment === 'paidSeparate' ? 'selected' : ''}>Paid separately</option>
-          </select>
-        </div>
-        <button type="button" class="mini-button danger remove-allowance">Remove</button>
-      `;
-      $('allowanceRows').appendChild(row);
-      row.querySelectorAll('input, select').forEach(el => el.addEventListener('input', calculate));
-      row.querySelector('.remove-allowance').addEventListener('click', () => { row.remove(); calculate(); });
-      calculate();
-    }
-
-    function getAllowances(ordinaryHours, weeksPerYear) {
-      if (!checked('includeAllowances')) return { rows: [], total: 0, absorbed: 0, paidSeparate: 0 };
-      const rows = [...document.querySelectorAll('.allowance-row')].map(row => {
-        const name = row.querySelector('.allowance-name').value || 'Allowance';
-        const amount = parseFloat(row.querySelector('.allowance-amount').value) || 0;
-        const frequency = row.querySelector('.allowance-frequency').value;
-        const treatment = row.querySelector('.allowance-treatment').value;
-        let annual = 0;
-        if (frequency === 'hourly') annual = amount * ordinaryHours * weeksPerYear;
-        if (frequency === 'weekly') annual = amount * weeksPerYear;
-        if (frequency === 'annual') annual = amount;
-        return { name, amount, frequency, treatment, annual };
-      });
-      return {
-        rows,
-        total: rows.reduce((sum, r) => sum + r.annual, 0),
-        absorbed: rows.filter(r => r.treatment === 'absorbed').reduce((sum, r) => sum + r.annual, 0),
-        paidSeparate: rows.filter(r => r.treatment === 'paidSeparate').reduce((sum, r) => sum + r.annual, 0)
-      };
-    }
-
-    function overtimeAnnual(rate, hours, rule, customMultiplier, weeks) {
-      if (rule === 'none' || hours <= 0) return 0;
-      if (rule === 'timehalf') return rate * 1.5 * hours * weeks;
-      if (rule === 'double') return rate * 2 * hours * weeks;
-      if (rule === 'custom') return rate * customMultiplier * hours * weeks;
-      if (rule === 'first3') {
-        const first = Math.min(hours, 3);
-        const extra = Math.max(hours - 3, 0);
-        return ((rate * 1.5 * first) + (rate * 2 * extra)) * weeks;
-      }
-      return 0;
-    }
-
-    function penaltyAnnual(rate, hours, multiplier, weeksOrAnnual, isAnnualHours) {
-      const hoursTotal = isAnnualHours ? hours : hours * weeksOrAnnual;
-      return rate * multiplier * hoursTotal;
-    }
-
-    function calculate() {
-      const employmentType = $('employmentType').value;
-      const ordinaryHours = val('ordinaryHours');
-      const weeksPerYear = val('weeksPerYear');
-      const awardBase = val('awardHourly');
-      const superRate = val('superRate') / 100;
-      const casualLoadingRate = val('casualLoadingRate') / 100;
-      const applyCasual = checked('applyCasualLoading') || employmentType === 'casual';
-      if (employmentType === 'casual') $('applyCasualLoading').checked = true;
-      const awardOrdinaryRate = awardBase * (applyCasual ? (1 + casualLoadingRate) : 1);
-
-      let actualAnnualBeforeSuper = 0;
-      let salaryInput = val('actualSalary');
-      let hourlyInput = val('actualHourly');
-
-      if (mode === 'hourly') {
-        actualAnnualBeforeSuper = hourlyInput * ordinaryHours * weeksPerYear;
-      } else {
-        actualAnnualBeforeSuper = checked('superIncluded') ? (salaryInput / (1 + superRate)) : salaryInput;
-        hourlyInput = ordinaryHours > 0 && weeksPerYear > 0 ? actualAnnualBeforeSuper / (ordinaryHours * weeksPerYear) : 0;
-      }
-
-      const estimatedSuper = actualAnnualBeforeSuper * superRate;
-      const annualRemunerationExSuper = actualAnnualBeforeSuper;
-      const annualPackageInclSuper = checked('superIncluded') && mode === 'salary' ? salaryInput : actualAnnualBeforeSuper + estimatedSuper;
-
-      const actualOvertime = overtimeAnnual(hourlyInput, val('overtimeHours'), $('overtimeRule').value, val('customOtMultiplier'), weeksPerYear);
-      const awardOvertime = overtimeAnnual(awardOrdinaryRate, val('overtimeHours'), $('overtimeRule').value, val('customOtMultiplier'), weeksPerYear);
-
-      const actualSaturday = penaltyAnnual(hourlyInput, val('saturdayHours'), val('saturdayMultiplier'), weeksPerYear, false);
-      const awardSaturday = penaltyAnnual(awardOrdinaryRate, val('saturdayHours'), val('saturdayMultiplier'), weeksPerYear, false);
-      const actualSunday = penaltyAnnual(hourlyInput, val('sundayHours'), val('sundayMultiplier'), weeksPerYear, false);
-      const awardSunday = penaltyAnnual(awardOrdinaryRate, val('sundayHours'), val('sundayMultiplier'), weeksPerYear, false);
-      const actualPH = penaltyAnnual(hourlyInput, val('publicHolidayHours'), val('publicHolidayMultiplier'), weeksPerYear, true);
-      const awardPH = penaltyAnnual(awardOrdinaryRate, val('publicHolidayHours'), val('publicHolidayMultiplier'), weeksPerYear, true);
-
-      const fullTimeLeaveHours = 152;
-      let leaveHours = fullTimeLeaveHours;
-      if (employmentType === 'parttime' && checked('proRataLeaveLoading')) leaveHours = fullTimeLeaveHours * (ordinaryHours / 38);
-      const awardLeaveLoading = checked('includeLeaveLoading') ? awardBase * 0.175 * leaveHours : 0;
-      const actualLeaveLoading = checked('includeLeaveLoading') ? hourlyInput * 0.175 * leaveHours : 0;
-
-      const awardBaseAnnual = awardOrdinaryRate * ordinaryHours * weeksPerYear;
-      const actualBaseAnnual = hourlyInput * ordinaryHours * weeksPerYear;
-      const allowances = getAllowances(ordinaryHours, weeksPerYear);
-
-      const paidSeparateAward = allowances.paidSeparate
-        + ($('saturdayTreatment').value === 'paidSeparate' ? awardSaturday : 0)
-        + ($('sundayTreatment').value === 'paidSeparate' ? awardSunday : 0)
-        + ($('publicHolidayTreatment').value === 'paidSeparate' ? awardPH : 0);
-
-      const paidSeparateActual = allowances.paidSeparate
-        + ($('saturdayTreatment').value === 'paidSeparate' ? actualSaturday : 0)
-        + ($('sundayTreatment').value === 'paidSeparate' ? actualSunday : 0)
-        + ($('publicHolidayTreatment').value === 'paidSeparate' ? actualPH : 0);
-
-      const absorbedPenaltyBenchmark = ($('saturdayTreatment').value === 'absorbed' ? awardSaturday : 0)
-        + ($('sundayTreatment').value === 'absorbed' ? awardSunday : 0)
-        + ($('publicHolidayTreatment').value === 'absorbed' ? awardPH : 0);
-
-      const totalAwardBenchmark = awardBaseAnnual + awardOvertime + awardSaturday + awardSunday + awardPH + awardLeaveLoading + allowances.total;
-      const absorptionBenchmark = awardBaseAnnual + awardOvertime + absorbedPenaltyBenchmark + awardLeaveLoading + allowances.absorbed;
-      const actualRemunerationTotal = actualBaseAnnual + actualOvertime + actualSaturday + actualSunday + actualPH + actualLeaveLoading + allowances.total;
-      const availableToAbsorb = mode === 'salary' ? annualRemunerationExSuper : actualBaseAnnual + actualOvertime + actualSaturday + actualSunday + actualPH + actualLeaveLoading + allowances.absorbed;
-      const gap = availableToAbsorb - absorptionBenchmark;
-
-      $('heroLabel').textContent = mode === 'salary' ? 'Salary excluding super' : 'Estimated annual remuneration';
-      $('heroValue').textContent = money(mode === 'salary' ? annualRemunerationExSuper : actualRemunerationTotal);
-      $('effectiveHourly').textContent = money(hourlyInput);
-      $('salaryExSuper').textContent = money(annualRemunerationExSuper);
-      $('superAmount').textContent = money(estimatedSuper);
-      $('benchmarkAnnual').textContent = money(totalAwardBenchmark);
-      $('absorbBenchmark').textContent = money(absorptionBenchmark);
-      $('gapAmount').textContent = money(gap);
-
-      const gapMetric = $('gapMetric');
-      gapMetric.className = 'metric ' + (gap >= 0 ? 'good' : 'bad');
-      const status = $('absorptionStatus');
-      if (gap >= 0) {
-        status.className = 'status good';
-        status.textContent = `Passes the simple absorption test by ${money(gap)} based on the assumptions entered.`;
-      } else {
-        status.className = 'status bad';
-        status.textContent = `Potential shortfall of ${money(Math.abs(gap))} based on the assumptions entered.`;
-      }
-
-      const rows = [
-        ['Actual base annual amount', actualBaseAnnual],
-        ['Actual overtime amount', actualOvertime],
-        ['Actual Saturday penalty amount', actualSaturday],
-        ['Actual Sunday penalty amount', actualSunday],
-        ['Actual public holiday penalty amount', actualPH],
-        ['Actual annual leave loading', actualLeaveLoading],
-        ['Allowance total', allowances.total],
-        ['Paid separately total', paidSeparateActual],
-        ['Total actual remuneration, excluding super', actualRemunerationTotal],
-        ['Annual package including estimated super', annualPackageInclSuper],
-        ['Award ordinary benchmark', awardBaseAnnual],
-        ['Award overtime benchmark', awardOvertime],
-        ['Award penalty benchmark', awardSaturday + awardSunday + awardPH],
-        ['Award annual leave loading', awardLeaveLoading],
-        ['Award allowances benchmark', allowances.total],
-        ['Total award/minimum benchmark', totalAwardBenchmark],
-        ['Absorption benchmark', absorptionBenchmark]
-      ];
-      $('breakdown').innerHTML = rows.map(([label, value]) => `<div class="breakdown-row"><span>${label}</span><strong>${money(value)}</strong></div>`).join('');
-
-      const otText = $('overtimeRule').selectedOptions[0].text;
-      const allowanceText = allowances.rows.length
-        ? allowances.rows.map(r => `${r.name}: ${money(r.amount)} ${r.frequency}, ${r.treatment === 'absorbed' ? 'to be absorbed by salary' : 'paid separately'} (${money(r.annual)} annually)`).join('; ')
-        : 'No allowances included.';
-      const leaveText = checked('includeLeaveLoading') ? `Annual leave loading included at 17.5% of ${number.format(leaveHours)} hours.` : 'Annual leave loading not included.';
-      $('summaryText').value = `Pay comparison summary\n\nEmployment type: ${$('employmentType').selectedOptions[0].text}. Ordinary hours: ${number.format(ordinaryHours)} per week over ${number.format(weeksPerYear)} weeks. Calculation mode: ${mode === 'salary' ? 'salary to hourly' : 'hourly to salary'}.\n\nActual/proposed rate: ${money(hourlyInput)} per hour. Salary excluding super: ${money(annualRemunerationExSuper)}. Estimated super at ${pct(val('superRate'))}: ${money(estimatedSuper)}.\n\nAward/minimum base rate entered: ${money(awardBase)} per hour${applyCasual ? `, with casual loading of ${pct(val('casualLoadingRate'))} applied to the award benchmark` : ''}. Overtime assumption: ${number.format(val('overtimeHours'))} hours per week, ${otText}. Saturday: ${number.format(val('saturdayHours'))} hours/week at ${number.format(val('saturdayMultiplier'))}x. Sunday: ${number.format(val('sundayHours'))} hours/week at ${number.format(val('sundayMultiplier'))}x. Public holiday: ${number.format(val('publicHolidayHours'))} hours/year at ${number.format(val('publicHolidayMultiplier'))}x. ${leaveText}\n\nAllowances: ${allowanceText}\n\nCalculated award/minimum benchmark: ${money(totalAwardBenchmark)}. Amount required to be absorbed by salary/remuneration: ${money(absorptionBenchmark)}. Available amount for absorption: ${money(availableToAbsorb)}. Result: ${gap >= 0 ? `surplus of ${money(gap)}` : `potential shortfall of ${money(Math.abs(gap))}`} based on the assumptions entered.\n\nImportant: This is a calculation aid only and does not determine award coverage, classification, all applicable penalties/allowances, annualised wage clause requirements, set-off validity, NES compliance, or legal obligations.`;
-    }
-
-    function resetDefaults() {
-      setMode(defaults.mode);
-      Object.entries(defaults).forEach(([key, value]) => {
-        const el = $(key);
-        if (!el) return;
-        if (el.type === 'checkbox') el.checked = value;
-        else el.value = value;
-      });
-      $('allowanceRows').innerHTML = '';
-      addAllowanceRow({ name: 'Allowance', amount: 0, frequency: 'weekly', treatment: 'absorbed' });
-      $('allowanceArea').classList.toggle('hidden', !checked('includeAllowances'));
-      $('customOtWrap').classList.toggle('hidden', $('overtimeRule').value !== 'custom');
-      calculate();
-    }
-
-    $('hourlyMode').addEventListener('click', () => setMode('hourly'));
-    $('salaryMode').addEventListener('click', () => setMode('salary'));
-    $('addAllowance').addEventListener('click', () => addAllowanceRow({ name: 'Allowance', amount: 0, frequency: 'weekly', treatment: 'absorbed' }));
-    $('includeAllowances').addEventListener('change', () => {
-      $('allowanceArea').classList.toggle('hidden', !checked('includeAllowances'));
-      if (checked('includeAllowances') && !document.querySelector('.allowance-row')) addAllowanceRow({ name: 'Allowance', amount: 0, frequency: 'weekly', treatment: 'absorbed' });
-      calculate();
-    });
-    $('overtimeRule').addEventListener('change', () => { $('customOtWrap').classList.toggle('hidden', $('overtimeRule').value !== 'custom'); calculate(); });
-    $('employmentType').addEventListener('change', () => {
-      if ($('employmentType').value === 'fulltime') $('ordinaryHours').value = 38;
-      if ($('employmentType').value === 'casual') $('applyCasualLoading').checked = true;
-      calculate();
-    });
-    $('copySummary').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText($('summaryText').value);
-        $('copySummary').textContent = 'Copied';
-        setTimeout(() => $('copySummary').textContent = 'Copy summary', 1500);
-      } catch (e) {
-        $('summaryText').select();
-        document.execCommand('copy');
-      }
-    });
-    $('resetDefaults').addEventListener('click', resetDefaults);
-    document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', calculate));
-
-    addAllowanceRow({ name: 'Allowance', amount: 0, frequency: 'weekly', treatment: 'absorbed' });
-    $('allowanceArea').classList.add('hidden');
-    calculate();
-  </script>
+  </div>
+</main>
+<script>
+const CONFIG = {
+  API_BASE: 'https://api.fwc.gov.au',
+  API_KEY: '804d9b4e809547ae9557302c76179e33'
+};
+const $ = id => document.getElementById(id);
+const money = n => (isFinite(n)?n:0).toLocaleString('en-AU',{style:'currency',currency:'AUD',minimumFractionDigits:2,maximumFractionDigits:2});
+const num = id => parseFloat($(id).value) || 0;
+const val = id => $(id).value;
+let allowanceCount = 0;
+let selectedAward = null;
+let selectedRate = null;
+function apiUrl(path, params={}){const u=new URL(CONFIG.API_BASE+path);Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')u.searchParams.set(k,v)});u.searchParams.set('subscription-key',CONFIG.API_KEY);return u.toString()}
+async function fetchJson(path, params){const res=await fetch(apiUrl(path,params),{headers:{'Accept':'application/json'}});if(!res.ok){let detail='';try{detail=await res.text()}catch{}throw new Error('API request failed: '+res.status+' '+detail.slice(0,140));}return res.json()}
+function setApiStatus(msg,type=''){const el=$('apiStatus');el.textContent=msg;el.className='api-status small '+type}
+function setLoading(btn, loading, text){if(loading){btn.dataset.old=btn.textContent;btn.innerHTML='<span class="spinner"></span> '+text;btn.disabled=true}else{btn.textContent=btn.dataset.old||btn.textContent;btn.disabled=false}}
+async function searchAwards(){const q=val('awardSearch').trim();if(!q){setApiStatus('Enter an award keyword first.','warn');return}const btn=$('searchAwardsBtn');setLoading(btn,true,'Searching');setApiStatus('Searching awards...');try{const data=await fetchJson('/api/v1/awards',{name:q.replaceAll(' ','+'),limit:100,sort:'name asc'});const results=data.results||[];const sel=$('awardSelect');sel.innerHTML='<option value="">Select an award</option>';results.forEach(a=>{const opt=document.createElement('option');opt.value=a.code||a.award_fixed_id;opt.textContent=`${a.code || a.award_fixed_id} - ${a.name} (${a.published_year || 'current'})`;opt.dataset.award=JSON.stringify(a);sel.appendChild(opt)});setApiStatus(results.length?`Found ${results.length} award result(s).`:'No awards found. Try a broader keyword.', results.length?'good':'warn')}catch(e){setApiStatus(e.message,'bad')}finally{setLoading(btn,false)}}
+async function loadClassifications(){const sel=$('awardSelect');if(!sel.value){setApiStatus('Select an award first.','warn');return}selectedAward=JSON.parse(sel.selectedOptions[0].dataset.award||'{}');const btn=$('loadClassificationsBtn');setLoading(btn,true,'Loading');setApiStatus('Loading pay rates...');try{const params={limit:100,sort:'classification_level asc, classification asc'};if(val('employeeRateType'))params.employee_rate_type_code=val('employeeRateType');const data=await fetchJson(`/api/v1/awards/${encodeURIComponent(sel.value)}/pay-rates`,params);let results=(data.results||[]).filter(r=>String(r.calculated_rate_type||r.base_rate_type||'').toLowerCase().includes('hour') || Number(r.calculated_rate)>0 || Number(r.base_rate)>0);
+results.sort((a,b)=>(a.classification_level||0)-(b.classification_level||0)||String(a.classification).localeCompare(String(b.classification)));
+const cls=$('classificationSelect');cls.innerHTML='<option value="">Select classification/pay rate</option>';results.forEach(r=>{const rate=Number(r.calculated_rate||r.base_rate||0);const opt=document.createElement('option');opt.value=r.classification_fixed_id;opt.dataset.rate=JSON.stringify(r);opt.textContent=`Level ${r.classification_level ?? '-'} - ${r.classification || 'Classification'} - ${money(rate)} ${r.calculated_rate_type || r.base_rate_type || ''} ${r.employee_rate_type_code? '('+r.employee_rate_type_code+')':''}`;cls.appendChild(opt)});setApiStatus(results.length?`Loaded ${results.length} pay rate option(s).`:'No pay rates found for this selection.', results.length?'good':'warn')}catch(e){setApiStatus(e.message,'bad')}finally{setLoading(btn,false)}}
+function applyApiRate(){const cls=$('classificationSelect');if(!cls.value){setApiStatus('Select a classification/pay rate first.','warn');return}selectedRate=JSON.parse(cls.selectedOptions[0].dataset.rate||'{}');const rate=Number(selectedRate.calculated_rate||selectedRate.base_rate||0);$('awardHourly').value=rate.toFixed(2);$('awardLabelManual').value=`${selectedAward?.code||''} ${selectedAward?.name||''} - ${selectedRate.classification||''}`.trim();setApiStatus(`Applied ${money(rate)} as the award benchmark hourly rate.`,'good');calculate()}
+function addAllowance(defaults={}){allowanceCount++;const id=allowanceCount;const div=document.createElement('div');div.className='allowance-item';div.dataset.allowanceId=id;div.innerHTML=`<div class="row"><div><label>Allowance name</label><input class="allowance-name" type="text" value="${defaults.name||'Allowance '+id}"></div><div><label>Amount ($)</label><input class="allowance-amount" type="number" step="0.01" value="${defaults.amount||0}"></div></div><div class="row3"><div><label>Frequency</label><select class="allowance-frequency"><option value="hourly">Hourly</option><option value="weekly">Weekly</option><option value="annual">Annual</option></select></div><div><label>Treatment</label><select class="allowance-treatment"><option value="absorb">Salary must absorb</option><option value="separate">Paid separately</option></select></div><div><label>&nbsp;</label><button type="button" class="danger remove-allowance">Remove</button></div></div>`;$('allowanceList').appendChild(div);div.querySelector('.allowance-frequency').value=defaults.frequency||'hourly';div.querySelector('.allowance-treatment').value=defaults.treatment||'absorb';div.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',calculate));div.querySelector('.remove-allowance').addEventListener('click',()=>{div.remove();calculate()});calculate()}
+function getAllowances(){return [...document.querySelectorAll('.allowance-item')].map(div=>({name:div.querySelector('.allowance-name').value||'Allowance',amount:parseFloat(div.querySelector('.allowance-amount').value)||0,frequency:div.querySelector('.allowance-frequency').value,treatment:div.querySelector('.allowance-treatment').value}))}
+function allowanceAnnual(a, ordinaryHours, weeks){if(a.frequency==='hourly')return a.amount*ordinaryHours*weeks;if(a.frequency==='weekly')return a.amount*weeks;return a.amount}
+function overtimeAnnual(rate, hours, weeks){const mode=val('overtimeMode');if(mode==='none'||hours<=0)return 0;if(mode==='flat15')return rate*1.5*hours*weeks;if(mode==='flat20')return rate*2*hours*weeks;if(mode==='first3then2'){const first=Math.min(hours,3);const rest=Math.max(hours-3,0);return (rate*1.5*first+rate*2*rest)*weeks}if(mode==='custom')return rate*num('customOtMultiplier')*hours*weeks;return 0}
+function updateVisibility(){const cm=val('calcMode');$('hourlyInputWrap').classList.toggle('hidden',cm!=='hourlyToSalary');$('salaryInputWrap').classList.toggle('hidden',cm!=='salaryToHourly');$('manualAwardBox').classList.toggle('hidden',val('awardSource')!=='manual');$('apiAwardBox').classList.toggle('hidden',val('awardSource')!=='api');const casual=val('employmentMode')==='casual'||val('casualLoadingMode')==='yes';$('casualLoadingBox').classList.toggle('hidden',!casual||val('casualLoadingMode')==='no');$('customOtBox').classList.toggle('hidden',val('overtimeMode')!=='custom');const allow=val('allowancesMode')==='yes';$('addAllowanceBtn').classList.toggle('hidden',!allow);$('allowanceList').classList.toggle('hidden',!allow);if(allow&&getAllowances().length===0)addAllowance({name:'Allowance 1',amount:0,frequency:'hourly',treatment:'absorb'});calculate()}
+function calculate(){const weeks=num('weeksPerYear'), ordinaryHours=num('ordinaryHours'), annualHours=ordinaryHours*weeks, awardHourly=num('awardHourly');let employeeBaseAnnual=0;let employeeHourly=0;if(val('calcMode')==='hourlyToSalary'){employeeHourly=num('employeeHourly');employeeBaseAnnual=employeeHourly*annualHours}else{let salary=num('annualSalary');if(val('superMode')==='included'){salary=salary/(1+num('superRate')/100)}employeeBaseAnnual=salary;employeeHourly=annualHours?salary/annualHours:0}$('employeeHourly').value = val('calcMode')==='salaryToHourly' ? employeeHourly.toFixed(4) : $('employeeHourly').value;
+const casualMode=val('casualLoadingMode');const isCasual=val('employmentMode')==='casual';const includeCasual=(casualMode==='yes')||(casualMode==='auto'&&isCasual);const casualPct=includeCasual?num('casualLoadingPct')/100:0;const awardRateForBenchmark=awardHourly*(1+casualPct);const employeeRateForCalc=(includeCasual&&val('casualLoadingAppliedTo')==='both')?employeeHourly*(1+casualPct):employeeHourly;const awardOrdinary=awardRateForBenchmark*annualHours;const employeeOrdinary=employeeBaseAnnual;const leaveLoading=val('leaveLoadingMode')==='yes'?awardHourly*0.175*152:0;const otHours=num('overtimeHours');const awardOt=overtimeAnnual(awardRateForBenchmark,otHours,weeks);const sat=val('saturdayMode')==='yes'?awardRateForBenchmark*num('saturdayMultiplier')*num('saturdayHours')*weeks:0;const sun=val('sundayMode')==='yes'?awardRateForBenchmark*num('sundayMultiplier')*num('sundayHours')*weeks:0;const ph=val('publicHolidayMode')==='yes'?awardRateForBenchmark*num('publicHolidayMultiplier')*num('publicHolidayHours'):0;let allowancesAbsorb=0, allowancesSeparate=0;const allowances = val('allowancesMode')==='yes'?getAllowances():[];allowances.forEach(a=>{const annual=allowanceAnnual(a,ordinaryHours,weeks);if(a.treatment==='absorb')allowancesAbsorb+=annual;else allowancesSeparate+=annual});const awardBenchmark=awardOrdinary+leaveLoading+awardOt+sat+sun+ph+allowancesAbsorb;const available=employeeOrdinary;const gap=available-awardBenchmark;const status=gap>=0?'Likely above benchmark':'Possible shortfall';$('employeeBase').textContent=money(available);$('awardBenchmark').textContent=money(awardBenchmark);$('gapSurplus').textContent=money(gap);$('gapSurplus').className='value '+(gap>=0?'good':'bad');$('hourlyEquivalent').textContent=money(employeeHourly);$('statusPill').textContent=status;$('statusPill').style.background=gap>=0?'#ecfdf3':'#fef3f2';$('statusPill').style.color=gap>=0?'#067647':'#b42318';const rows=[['Employee ordinary/base annual amount',available],['Award ordinary annual benchmark',awardOrdinary],['Annual leave loading',leaveLoading],['Overtime benchmark',awardOt],['Saturday penalty benchmark',sat],['Sunday penalty benchmark',sun],['Public holiday benchmark',ph],['Allowances to be absorbed',allowancesAbsorb],['Allowances paid separately (not tested as salary absorption)',allowancesSeparate],['Total award benchmark to absorb',awardBenchmark],['Gap / surplus',gap]];$('breakdownRows').innerHTML=rows.map(([l,v])=>`<tr><td>${l}</td><td><strong>${money(v)}</strong></td></tr>`).join('');const awardLabel=$('awardLabelManual').value||'Award benchmark';$('awardSourceSummary').innerHTML=`<strong>${awardLabel}</strong><br>Benchmark hourly rate: ${money(awardHourly)}${includeCasual?`<br>Casual loading included: ${(casualPct*100).toFixed(2)}%`:''}${selectedRate?`<br>API classification fixed ID: <span class="mono">${selectedRate.classification_fixed_id||''}</span>`:''}`;const allowanceText=allowances.length?allowances.map(a=>`${a.name}: ${money(a.amount)} ${a.frequency}, ${a.treatment==='absorb'?'salary must absorb':'paid separately'}`).join('; '):'None';$('summaryText').value=`Pay calculation summary\n\nEmployment type: ${val('employmentMode')}\nCalculation mode: ${val('calcMode')==='hourlyToSalary'?'hourly to salary':'salary to hourly'}\nOrdinary hours: ${ordinaryHours} per week over ${weeks} weeks\nEmployee hourly equivalent: ${money(employeeHourly)}\nEmployee annual amount tested: ${money(available)}${val('superMode')==='included'?' excluding super after extracting super from salary/remuneration':''}\n\nAward/source: ${awardLabel}\nAward hourly benchmark: ${money(awardHourly)}\nAward ordinary annual benchmark: ${money(awardOrdinary)}\nAnnual leave loading: ${money(leaveLoading)}\nOvertime benchmark: ${money(awardOt)}\nSaturday penalty benchmark: ${money(sat)}\nSunday penalty benchmark: ${money(sun)}\nPublic holiday benchmark: ${money(ph)}\nAllowances to be absorbed: ${money(allowancesAbsorb)}\nAllowances paid separately: ${money(allowancesSeparate)}\nAllowance details: ${allowanceText}\n\nTotal benchmark to absorb: ${money(awardBenchmark)}\nGap/surplus: ${money(gap)}\nResult: ${status}\n\nNote: This is a calculation aid only. Award coverage, classification, annualised wage clauses, set-off wording, record-keeping and other compliance matters should be checked separately.`}
+function init(){document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',updateVisibility));$('searchAwardsBtn').addEventListener('click',searchAwards);$('loadClassificationsBtn').addEventListener('click',loadClassifications);$('applyApiRateBtn').addEventListener('click',applyApiRate);$('addAllowanceBtn').addEventListener('click',()=>addAllowance({name:'Allowance '+(allowanceCount+1),amount:0,frequency:'hourly',treatment:'absorb'}));$('copySummaryBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('summaryText').value);$('copySummaryBtn').textContent='Copied';setTimeout(()=>$('copySummaryBtn').textContent='Copy summary',1200)}catch{$('summaryText').select();document.execCommand('copy')}});updateVisibility()}init();
+</script>
 </body>
 </html>

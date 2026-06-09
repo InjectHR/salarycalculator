@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-<header><div class="wrap"><span class="pill">Stage 2.1 API-assisted calculator</span><h1>Pay Rate & Annualised Salary Calculator</h1><p>Estimate salary-to-hourly, hourly-to-salary, award benchmark comparisons, annualised salary absorption, allowances, overtime and penalty assumptions. Fair Work API lookup assists with award/classification rates, using a small proxy to avoid browser fetch/CORS issues. Manual fallback is retained.</p></div></header>
+<header><div class="wrap"><span class="pill">Stage 2.3 API-assisted calculator</span><h1>Pay Rate & Annualised Salary Calculator</h1><p>Estimate salary-to-hourly, hourly-to-salary, award benchmark comparisons, annualised salary absorption, allowances, overtime and penalty assumptions. Fair Work API lookup assists with award/classification rates, using a small proxy to avoid browser fetch/CORS issues. Manual fallback is retained.</p></div></header>
 <main class="wrap">
   <div class="grid">
     <section>
@@ -38,22 +38,15 @@
           <div class="row"><div><label for="awardHourly">Award/minimum hourly rate ($)</label><input id="awardHourly" type="number" step="0.01" value="29.70"></div><div><label for="awardLabelManual">Award/classification label</label><input id="awardLabelManual" type="text" value="Manual award benchmark"></div></div>
         </div>
         <div id="apiAwardBox" class="compact-box hidden">
-          <div class="notice warning">This version expects the Fair Work API to be called through a small proxy, such as a Cloudflare Worker. This avoids the browser “Failed to fetch” issue and keeps the API key out of the public page source.</div>
+          <div class="notice warning">This lookup shows adult hourly rates only. If you need a junior, apprentice, trainee or other special rate, enter the rate manually instead.</div>
           <div class="row">
             <div><label for="awardSearch">Search award name</label><input id="awardSearch" type="text" placeholder="e.g. Clerks, Retail, Banking"></div>
             <div><label>&nbsp;</label><button id="searchAwardsBtn" type="button">Search awards</button></div>
           </div>
           <label for="awardSelect">Select award</label><select id="awardSelect"><option value="">Search and select an award</option></select>
-          <div class="row">
-            <div><label for="employeeRateType">Rate type</label><select id="employeeRateType"><option value="AD">Adult (AD)</option><option value="">All rate types</option><option value="J">Junior / other</option><option value="TN">Trainee (TN)</option><option value="APP">Apprentice (APP)</option></select></div>
-            <div><label>&nbsp;</label><button id="loadClassificationsBtn" type="button" class="secondary">Load classifications</button></div>
-          </div>
-          <div class="row">
-            <div><label for="rateDisplayMode">Pay rate dropdown mode</label><select id="rateDisplayMode"><option value="simple">Recommended - current adult hourly rates only</option><option value="raw">Advanced - show raw API results</option></select></div>
-            <div><label for="classificationSelect">Select classification/pay rate</label><select id="classificationSelect"><option value="">Load classifications for selected award</option></select></div>
-          </div>
+          <label for="classificationSelect">Select adult classification/pay rate</label><select id="classificationSelect"><option value="">Select an award to load adult rates</option></select>
           <div class="top-actions"><button id="applyApiRateBtn" type="button">Apply selected rate</button><span id="apiStatus" class="api-status small"></span></div>
-          <div class="hint">Recommended mode filters the API to current adult hourly rates, removes old/duplicate records, and shows a pay-guide style list. Use Advanced only if you need to inspect raw API records.</div>
+          <div class="hint">When you select an award, the tool automatically loads current adult hourly classification rates and removes old/duplicate-looking API records.</div>
         </div>
       </div>
 
@@ -156,7 +149,7 @@ async function fetchJson(path, params){
 }
 function setApiStatus(msg,type=''){const el=$('apiStatus');el.textContent=msg;el.className='api-status small '+type}
 function setLoading(btn, loading, text){if(loading){btn.dataset.old=btn.textContent;btn.innerHTML='<span class="spinner"></span> '+text;btn.disabled=true}else{btn.textContent=btn.dataset.old||btn.textContent;btn.disabled=false}}
-async function searchAwards(){const q=val('awardSearch').trim();if(!q){setApiStatus('Enter an award keyword first.','warn');return}const btn=$('searchAwardsBtn');setLoading(btn,true,'Searching');setApiStatus('Searching awards...');try{const data=await fetchJson('/api/v1/awards',{name:q.replaceAll(' ','+'),limit:100,sort:'name asc'});const results=data.results||[];const sel=$('awardSelect');sel.innerHTML='<option value="">Select an award</option>';results.forEach(a=>{const opt=document.createElement('option');opt.value=a.code||a.award_fixed_id;opt.textContent=`${a.code || a.award_fixed_id} - ${a.name} (${a.published_year || 'current'})`;opt.dataset.award=JSON.stringify(a);sel.appendChild(opt)});setApiStatus(results.length?`Found ${results.length} award result(s).`:'No awards found. Try a broader keyword.', results.length?'good':'warn')}catch(e){setApiStatus(e.message,'bad')}finally{setLoading(btn,false)}}
+async function searchAwards(){const q=val('awardSearch').trim();if(!q){setApiStatus('Enter an award keyword first.','warn');return}const btn=$('searchAwardsBtn');setLoading(btn,true,'Searching');setApiStatus('Searching awards...');try{const data=await fetchJson('/api/v1/awards',{name:q.replaceAll(' ','+'),limit:100,sort:'name asc'});const results=data.results||[];const sel=$('awardSelect');$('classificationSelect').innerHTML='<option value="">Select an award to load adult rates</option>';sel.innerHTML='<option value="">Select an award</option>';results.forEach(a=>{const opt=document.createElement('option');opt.value=a.code||a.award_fixed_id;opt.textContent=`${a.code || a.award_fixed_id} - ${a.name} (${a.published_year || 'current'})`;opt.dataset.award=JSON.stringify(a);sel.appendChild(opt)});setApiStatus(results.length?`Found ${results.length} award result(s).`:'No awards found. Try a broader keyword.', results.length?'good':'warn')}catch(e){setApiStatus(e.message,'bad')}finally{setLoading(btn,false)}}
 function isCurrentApiRecord(r){
   const today = new Date();
   const from = r.operative_from ? new Date(r.operative_from) : null;
@@ -176,45 +169,43 @@ function isHourlyRateRecord(r){
   return type.includes('hour') && Number(r.calculated_rate || r.base_rate || 0) > 0;
 }
 function makeRateKey(r){
-  return [cleanClassificationName(r.classification).toLowerCase(), r.classification_level || '', r.employee_rate_type_code || ''].join('|');
+  return [cleanClassificationName(r.classification).toLowerCase(), r.classification_level || ''].join('|');
 }
 function simplifyPayRates(rawResults){
-  let results = (rawResults || []).filter(isHourlyRateRecord);
+  let results = (rawResults || [])
+    .filter(isHourlyRateRecord)
+    .filter(r => String(r.employee_rate_type_code || '').toUpperCase() === 'AD');
 
-  // In recommended mode, show the practical pay-guide style list: adult, current, latest-published, deduplicated rates.
-  if (val('rateDisplayMode') === 'simple') {
-    results = results.filter(r => String(r.employee_rate_type_code || '').toUpperCase() === 'AD');
-    const current = results.filter(isCurrentApiRecord);
-    if (current.length) results = current;
+  const current = results.filter(isCurrentApiRecord);
+  if (current.length) results = current;
 
-    const maxPublished = Math.max(...results.map(r => Number(r.published_year || 0)).filter(Boolean));
-    if (Number.isFinite(maxPublished) && maxPublished > 0) {
-      results = results.filter(r => Number(r.published_year || 0) === maxPublished);
-    }
-
-    // Some awards/API responses still contain several rows for the same displayed classification.
-    // Keep the latest version and prefer the highest calculated hourly rate for that same classification key.
-    const byKey = new Map();
-    results.forEach(r => {
-      const key = makeRateKey(r);
-      const existing = byKey.get(key);
-      if (!existing) { byKey.set(key, r); return; }
-      const existingVersion = Number(existing.version_number || 0);
-      const thisVersion = Number(r.version_number || 0);
-      const existingRate = Number(existing.calculated_rate || existing.base_rate || 0);
-      const thisRate = Number(r.calculated_rate || r.base_rate || 0);
-      if (thisVersion > existingVersion || (thisVersion === existingVersion && thisRate > existingRate)) {
-        byKey.set(key, r);
-      }
-    });
-    results = Array.from(byKey.values());
+  const maxPublished = Math.max(...results.map(r => Number(r.published_year || 0)).filter(Boolean));
+  if (Number.isFinite(maxPublished) && maxPublished > 0) {
+    results = results.filter(r => Number(r.published_year || 0) === maxPublished);
   }
+
+  // Some awards/API responses still contain several rows for the same displayed classification.
+  // Keep the latest version and prefer the highest calculated hourly rate for that same classification key.
+  const byKey = new Map();
+  results.forEach(r => {
+    const key = makeRateKey(r);
+    const existing = byKey.get(key);
+    if (!existing) { byKey.set(key, r); return; }
+    const existingVersion = Number(existing.version_number || 0);
+    const thisVersion = Number(r.version_number || 0);
+    const existingRate = Number(existing.calculated_rate || existing.base_rate || 0);
+    const thisRate = Number(r.calculated_rate || r.base_rate || 0);
+    if (thisVersion > existingVersion || (thisVersion === existingVersion && thisRate > existingRate)) {
+      byKey.set(key, r);
+    }
+  });
+  results = Array.from(byKey.values());
 
   results.sort((a,b)=>(a.classification_level||0)-(b.classification_level||0)||cleanClassificationName(a.classification).localeCompare(cleanClassificationName(b.classification))||Number(a.calculated_rate||a.base_rate||0)-Number(b.calculated_rate||b.base_rate||0));
   return results;
 }
-async function loadClassifications(){const sel=$('awardSelect');if(!sel.value){setApiStatus('Select an award first.','warn');return}selectedAward=JSON.parse(sel.selectedOptions[0].dataset.award||'{}');const btn=$('loadClassificationsBtn');setLoading(btn,true,'Loading');setApiStatus('Loading pay rates...');try{const params={limit:100,sort:'published_year desc, classification_level asc, classification asc'};if(val('rateDisplayMode')==='simple'){params.employee_rate_type_code='AD'}else if(val('employeeRateType')){params.employee_rate_type_code=val('employeeRateType')}const data=await fetchJson(`/api/v1/awards/${encodeURIComponent(sel.value)}/pay-rates`,params);let results=simplifyPayRates(data.results||[]);
-const cls=$('classificationSelect');cls.innerHTML='<option value="">Select classification/pay rate</option>';results.forEach(r=>{const rate=Number(r.calculated_rate||r.base_rate||0);const opt=document.createElement('option');opt.value=String(r.classification_fixed_id||'')+'-'+String(r.base_pay_rate_id||r.calculated_pay_rate_id||rate);opt.dataset.rate=JSON.stringify(r);const name=cleanClassificationName(r.classification);const type=(r.calculated_rate_type||r.base_rate_type||'Hourly');const level=r.classification_level?`Level ${r.classification_level} - `:'';const meta=val('rateDisplayMode')==='raw'?` ${r.employee_rate_type_code? '('+r.employee_rate_type_code+')':''} ${r.published_year? ' · '+r.published_year:''}`:'';opt.textContent=`${level}${name} — ${money(rate)} ${type}${meta}`;cls.appendChild(opt)});const modeText=val('rateDisplayMode')==='simple'?'recommended current adult hourly':'raw API';setApiStatus(results.length?`Loaded ${results.length} ${modeText} rate option(s).`:'No pay rates found for this selection.', results.length?'good':'warn')}catch(e){setApiStatus(e.message,'bad')}finally{setLoading(btn,false)}}
+async function loadClassifications(){const sel=$('awardSelect');const cls=$('classificationSelect');selectedRate=null;cls.innerHTML='<option value="">Select an award to load adult rates</option>';if(!sel.value){setApiStatus('Select an award first.','warn');return}selectedAward=JSON.parse(sel.selectedOptions[0].dataset.award||'{}');setApiStatus('Loading adult hourly rates...');try{const params={limit:100,sort:'published_year desc, classification_level asc, classification asc',employee_rate_type_code:'AD'};const data=await fetchJson(`/api/v1/awards/${encodeURIComponent(sel.value)}/pay-rates`,params);let results=simplifyPayRates(data.results||[]);
+cls.innerHTML='<option value="">Select adult classification/pay rate</option>';results.forEach(r=>{const rate=Number(r.calculated_rate||r.base_rate||0);const opt=document.createElement('option');opt.value=String(r.classification_fixed_id||'')+'-'+String(r.base_pay_rate_id||r.calculated_pay_rate_id||rate);opt.dataset.rate=JSON.stringify(r);const name=cleanClassificationName(r.classification);const type=(r.calculated_rate_type||r.base_rate_type||'Hourly');const level=r.classification_level?`Level ${r.classification_level} - `:'';opt.textContent=`${level}${name} — ${money(rate)} ${type}`;cls.appendChild(opt)});setApiStatus(results.length?`Loaded ${results.length} current adult hourly rate option(s).`:'No current adult hourly rates found. Use manual entry if this award uses another rate structure.', results.length?'good':'warn')}catch(e){setApiStatus(e.message,'bad')}}
 function applyApiRate(){const cls=$('classificationSelect');if(!cls.value){setApiStatus('Select a classification/pay rate first.','warn');return}selectedRate=JSON.parse(cls.selectedOptions[0].dataset.rate||'{}');const rate=Number(selectedRate.calculated_rate||selectedRate.base_rate||0);$('awardHourly').value=rate.toFixed(2);$('awardLabelManual').value=`${selectedAward?.code||''} ${selectedAward?.name||''} - ${selectedRate.classification||''}`.trim();setApiStatus(`Applied ${money(rate)} as the award benchmark hourly rate.`,'good');calculate()}
 function addAllowance(defaults={}){allowanceCount++;const id=allowanceCount;const div=document.createElement('div');div.className='allowance-item';div.dataset.allowanceId=id;div.innerHTML=`<div class="row"><div><label>Allowance name</label><input class="allowance-name" type="text" value="${defaults.name||'Allowance '+id}"></div><div><label>Amount ($)</label><input class="allowance-amount" type="number" step="0.01" value="${defaults.amount||0}"></div></div><div class="row3"><div><label>Frequency</label><select class="allowance-frequency"><option value="hourly">Hourly</option><option value="weekly">Weekly</option><option value="annual">Annual</option></select></div><div><label>Treatment</label><select class="allowance-treatment"><option value="absorb">Salary must absorb</option><option value="separate">Paid separately</option></select></div><div><label>&nbsp;</label><button type="button" class="danger remove-allowance">Remove</button></div></div>`;$('allowanceList').appendChild(div);div.querySelector('.allowance-frequency').value=defaults.frequency||'hourly';div.querySelector('.allowance-treatment').value=defaults.treatment||'absorb';div.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',calculate));div.querySelector('.remove-allowance').addEventListener('click',()=>{div.remove();calculate()});calculate()}
 function getAllowances(){return [...document.querySelectorAll('.allowance-item')].map(div=>({name:div.querySelector('.allowance-name').value||'Allowance',amount:parseFloat(div.querySelector('.allowance-amount').value)||0,frequency:div.querySelector('.allowance-frequency').value,treatment:div.querySelector('.allowance-treatment').value}))}
@@ -223,9 +214,7 @@ function overtimeAnnual(rate, hours, weeks){const mode=val('overtimeMode');if(mo
 function updateVisibility(){const cm=val('calcMode');$('hourlyInputWrap').classList.toggle('hidden',cm!=='hourlyToSalary');$('salaryInputWrap').classList.toggle('hidden',cm!=='salaryToHourly');$('manualAwardBox').classList.toggle('hidden',val('awardSource')!=='manual');$('apiAwardBox').classList.toggle('hidden',val('awardSource')!=='api');const casual=val('employmentMode')==='casual'||val('casualLoadingMode')==='yes';$('casualLoadingBox').classList.toggle('hidden',!casual||val('casualLoadingMode')==='no');$('customOtBox').classList.toggle('hidden',val('overtimeMode')!=='custom');const allow=val('allowancesMode')==='yes';$('addAllowanceBtn').classList.toggle('hidden',!allow);$('allowanceList').classList.toggle('hidden',!allow);if(allow&&getAllowances().length===0)addAllowance({name:'Allowance 1',amount:0,frequency:'hourly',treatment:'absorb'});calculate()}
 function calculate(){const weeks=num('weeksPerYear'), ordinaryHours=num('ordinaryHours'), annualHours=ordinaryHours*weeks, awardHourly=num('awardHourly');let employeeBaseAnnual=0;let employeeHourly=0;if(val('calcMode')==='hourlyToSalary'){employeeHourly=num('employeeHourly');employeeBaseAnnual=employeeHourly*annualHours}else{let salary=num('annualSalary');if(val('superMode')==='included'){salary=salary/(1+num('superRate')/100)}employeeBaseAnnual=salary;employeeHourly=annualHours?salary/annualHours:0}$('employeeHourly').value = val('calcMode')==='salaryToHourly' ? employeeHourly.toFixed(4) : $('employeeHourly').value;
 const casualMode=val('casualLoadingMode');const isCasual=val('employmentMode')==='casual';const includeCasual=(casualMode==='yes')||(casualMode==='auto'&&isCasual);const casualPct=includeCasual?num('casualLoadingPct')/100:0;const awardRateForBenchmark=awardHourly*(1+casualPct);const employeeRateForCalc=(includeCasual&&val('casualLoadingAppliedTo')==='both')?employeeHourly*(1+casualPct):employeeHourly;const awardOrdinary=awardRateForBenchmark*annualHours;const employeeOrdinary=employeeBaseAnnual;const leaveLoading=val('leaveLoadingMode')==='yes'?awardHourly*0.175*152:0;const otHours=num('overtimeHours');const awardOt=overtimeAnnual(awardRateForBenchmark,otHours,weeks);const sat=val('saturdayMode')==='yes'?awardRateForBenchmark*num('saturdayMultiplier')*num('saturdayHours')*weeks:0;const sun=val('sundayMode')==='yes'?awardRateForBenchmark*num('sundayMultiplier')*num('sundayHours')*weeks:0;const ph=val('publicHolidayMode')==='yes'?awardRateForBenchmark*num('publicHolidayMultiplier')*num('publicHolidayHours'):0;let allowancesAbsorb=0, allowancesSeparate=0;const allowances = val('allowancesMode')==='yes'?getAllowances():[];allowances.forEach(a=>{const annual=allowanceAnnual(a,ordinaryHours,weeks);if(a.treatment==='absorb')allowancesAbsorb+=annual;else allowancesSeparate+=annual});const awardBenchmark=awardOrdinary+leaveLoading+awardOt+sat+sun+ph+allowancesAbsorb;const available=employeeOrdinary;const gap=available-awardBenchmark;const status=gap>=0?'Likely above benchmark':'Possible shortfall';$('employeeBase').textContent=money(available);$('awardBenchmark').textContent=money(awardBenchmark);$('gapSurplus').textContent=money(gap);$('gapSurplus').className='value '+(gap>=0?'good':'bad');$('hourlyEquivalent').textContent=money(employeeHourly);$('statusPill').textContent=status;$('statusPill').style.background=gap>=0?'#ecfdf3':'#fef3f2';$('statusPill').style.color=gap>=0?'#067647':'#b42318';const rows=[['Employee ordinary/base annual amount',available],['Award ordinary annual benchmark',awardOrdinary],['Annual leave loading',leaveLoading],['Overtime benchmark',awardOt],['Saturday penalty benchmark',sat],['Sunday penalty benchmark',sun],['Public holiday benchmark',ph],['Allowances to be absorbed',allowancesAbsorb],['Allowances paid separately (not tested as salary absorption)',allowancesSeparate],['Total award benchmark to absorb',awardBenchmark],['Gap / surplus',gap]];$('breakdownRows').innerHTML=rows.map(([l,v])=>`<tr><td>${l}</td><td><strong>${money(v)}</strong></td></tr>`).join('');const awardLabel=$('awardLabelManual').value||'Award benchmark';$('awardSourceSummary').innerHTML=`<strong>${awardLabel}</strong><br>Benchmark hourly rate: ${money(awardHourly)}${includeCasual?`<br>Casual loading included: ${(casualPct*100).toFixed(2)}%`:''}${selectedRate?`<br>API classification fixed ID: <span class="mono">${selectedRate.classification_fixed_id||''}</span>`:''}`;const allowanceText=allowances.length?allowances.map(a=>`${a.name}: ${money(a.amount)} ${a.frequency}, ${a.treatment==='absorb'?'salary must absorb':'paid separately'}`).join('; '):'None';$('summaryText').value=`Pay calculation summary\n\nEmployment type: ${val('employmentMode')}\nCalculation mode: ${val('calcMode')==='hourlyToSalary'?'hourly to salary':'salary to hourly'}\nOrdinary hours: ${ordinaryHours} per week over ${weeks} weeks\nEmployee hourly equivalent: ${money(employeeHourly)}\nEmployee annual amount tested: ${money(available)}${val('superMode')==='included'?' excluding super after extracting super from salary/remuneration':''}\n\nAward/source: ${awardLabel}\nAward hourly benchmark: ${money(awardHourly)}\nAward ordinary annual benchmark: ${money(awardOrdinary)}\nAnnual leave loading: ${money(leaveLoading)}\nOvertime benchmark: ${money(awardOt)}\nSaturday penalty benchmark: ${money(sat)}\nSunday penalty benchmark: ${money(sun)}\nPublic holiday benchmark: ${money(ph)}\nAllowances to be absorbed: ${money(allowancesAbsorb)}\nAllowances paid separately: ${money(allowancesSeparate)}\nAllowance details: ${allowanceText}\n\nTotal benchmark to absorb: ${money(awardBenchmark)}\nGap/surplus: ${money(gap)}\nResult: ${status}\n\nNote: This is a calculation aid only. Award coverage, classification, annualised wage clauses, set-off wording, record-keeping and other compliance matters should be checked separately.`}
-function init(){document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',updateVisibility));$('searchAwardsBtn').addEventListener('click',searchAwards);$('loadClassificationsBtn').addEventListener('click',loadClassifications);$('applyApiRateBtn').addEventListener('click',applyApiRate);$('addAllowanceBtn').addEventListener('click',()=>addAllowance({name:'Allowance '+(allowanceCount+1),amount:0,frequency:'hourly',treatment:'absorb'}));$('copySummaryBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('summaryText').value);$('copySummaryBtn').textContent='Copied';setTimeout(()=>$('copySummaryBtn').textContent='Copy summary',1200)}catch{$('summaryText').select();document.execCommand('copy')}});updateVisibility()}init();
+function init(){document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',updateVisibility));$('searchAwardsBtn').addEventListener('click',searchAwards);$('awardSelect').addEventListener('change',loadClassifications);$('applyApiRateBtn').addEventListener('click',applyApiRate);$('addAllowanceBtn').addEventListener('click',()=>addAllowance({name:'Allowance '+(allowanceCount+1),amount:0,frequency:'hourly',treatment:'absorb'}));$('copySummaryBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('summaryText').value);$('copySummaryBtn').textContent='Copied';setTimeout(()=>$('copySummaryBtn').textContent='Copy summary',1200)}catch{$('summaryText').select();document.execCommand('copy')}});updateVisibility()}init();
 </script>
-</body>
-</html>
 </body>
 </html>
